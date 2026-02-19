@@ -20,6 +20,11 @@ import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Locale;
+import android.content.pm.ApplicationInfo;
+import com.example.apporganizer.data.AppStateDao;
+import com.example.apporganizer.logic.CategoryGuesser;
+import com.example.apporganizer.logic.CategoryResult;
+import java.util.Map;
 
 public class MainActivity extends AppCompatActivity implements OnAppClickListener {
 
@@ -27,7 +32,7 @@ public class MainActivity extends AppCompatActivity implements OnAppClickListene
     private SearchView searchView;
 
     private AppsAdapter adapter;
-
+    private AppStateDao appStateDao;
     private final List<AppInfo> allApps = new ArrayList<>();
     private final List<AppInfo> filteredApps = new ArrayList<>();
 
@@ -35,7 +40,7 @@ public class MainActivity extends AppCompatActivity implements OnAppClickListene
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
-
+        appStateDao = new AppStateDao(this);
         rvApps = findViewById(R.id.rvApps);
         searchView = findViewById(R.id.searchView); // OK si ton XML utilise androidx.appcompat.widget.SearchView
 
@@ -52,6 +57,9 @@ public class MainActivity extends AppCompatActivity implements OnAppClickListene
 
         PackageManager pm = getPackageManager();
 
+        // On charge les catégories sauvegardées
+        Map<String, AppStateDao.StoredState> saved = appStateDao.getAllStates();
+
         Intent intent = new Intent(Intent.ACTION_MAIN, null);
         intent.addCategory(Intent.CATEGORY_LAUNCHER);
 
@@ -60,10 +68,32 @@ public class MainActivity extends AppCompatActivity implements OnAppClickListene
         for (ResolveInfo ri : resolveInfos) {
             String packageName = ri.activityInfo.packageName;
             String label = ri.loadLabel(pm).toString();
-            allApps.add(new AppInfo(packageName, label, ri.loadIcon(pm)));
+
+            AppInfo app = new AppInfo(packageName, label, ri.loadIcon(pm));
+
+            // Si déjà en base : on réutilise
+            AppStateDao.StoredState state = saved.get(packageName);
+            if (state != null) {
+                app.setCategory(state.category);
+                app.setConfidence(state.confidence);
+            } else {
+                // Sinon : tri intelligent + sauvegarde
+                ApplicationInfo appInfo = null;
+                try {
+                    appInfo = pm.getApplicationInfo(packageName, 0);
+                } catch (PackageManager.NameNotFoundException ignored) { }
+
+                CategoryResult res = CategoryGuesser.guess(label, packageName, appInfo);
+                app.setCategory(res.category);
+                app.setConfidence(res.confidence);
+
+                appStateDao.upsertState(packageName, res.category, res.confidence);
+            }
+
+            allApps.add(app);
         }
 
-        // Tri alphabétique FR (accents)
+        // Tri alphabétique FR
         final Collator collator = Collator.getInstance(Locale.FRENCH);
         Collections.sort(allApps, new Comparator<AppInfo>() {
             @Override
@@ -76,6 +106,7 @@ public class MainActivity extends AppCompatActivity implements OnAppClickListene
         filteredApps.addAll(allApps);
         adapter.setItems(filteredApps);
     }
+
 
     private void setupSearch() {
         if (searchView == null) return;

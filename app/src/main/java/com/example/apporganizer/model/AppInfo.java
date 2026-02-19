@@ -7,21 +7,24 @@ public class AppInfo {
     private final String label;
     private final Drawable icon;
 
+    private String category;
+    private int confidence;
+
     public AppInfo(String packageName, String label, Drawable icon) {
         this.packageName = packageName;
         this.label = label;
         this.icon = icon;
+        this.category = "Autres";
+        this.confidence = 0;
     }
 
-    public String getPackageName() {
-        return packageName;
-    }
+    public String getPackageName() { return packageName; }
+    public String getLabel() { return label; }
+    public Drawable getIcon() { return icon; }
 
-    public String getLabel() {
-        return label;
-    }
+    public String getCategory() { return category; }
+    public void setCategory(String category) { this.category = category; }
 
-    public Drawable getIcon() {
-        return icon;
-    }
+    public int getConfidence() { return confidence; }
+    public void setConfidence(int confidence) { this.confidence = confidence; }
 }

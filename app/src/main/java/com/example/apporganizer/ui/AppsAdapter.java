@@ -43,9 +43,7 @@ public class AppsAdapter extends RecyclerView.Adapter<AppsAdapter.AppViewHolder>
 
         holder.txtLabel.setText(app.getLabel());
         holder.imgIcon.setImageDrawable(app.getIcon());
-
-        // Étape 4/5 : on affichera la catégorie ici
-        holder.txtCategory.setText("");
+        holder.txtCategory.setText(app.getCategory() + " • " + app.getConfidence() + "%");
 
         holder.itemView.setOnClickListener(v -> {
             if (listener != null) {
