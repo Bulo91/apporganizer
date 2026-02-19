@@ -12,6 +12,7 @@ import androidx.recyclerview.widget.RecyclerView;
 
 import com.example.apporganizer.model.AppInfo;
 import com.example.apporganizer.ui.AppsAdapter;
+import com.example.apporganizer.ui.OnAppClickListener;
 
 import java.text.Collator;
 import java.util.ArrayList;
@@ -20,7 +21,7 @@ import java.util.Comparator;
 import java.util.List;
 import java.util.Locale;
 
-public class MainActivity extends AppCompatActivity {
+public class MainActivity extends AppCompatActivity implements OnAppClickListener {
 
     private RecyclerView rvApps;
     private SearchView searchView;
@@ -36,19 +37,14 @@ public class MainActivity extends AppCompatActivity {
         setContentView(R.layout.activity_main);
 
         rvApps = findViewById(R.id.rvApps);
-
-        // Si tu n’as pas encore de SearchView dans activity_main, commente cette ligne et setupSearch()
-        searchView = findViewById(R.id.searchView);
+        searchView = findViewById(R.id.searchView); // OK si ton XML utilise androidx.appcompat.widget.SearchView
 
         rvApps.setLayoutManager(new LinearLayoutManager(this));
-        adapter = new AppsAdapter();
+        adapter = new AppsAdapter(this);
         rvApps.setAdapter(adapter);
 
         loadInstalledApps();
-
-        if (searchView != null) {
-            setupSearch();
-        }
+        setupSearch();
     }
 
     private void loadInstalledApps() {
@@ -67,7 +63,7 @@ public class MainActivity extends AppCompatActivity {
             allApps.add(new AppInfo(packageName, label, ri.loadIcon(pm)));
         }
 
-        // Tri alphabétique (gère accents FR)
+        // Tri alphabétique FR (accents)
         final Collator collator = Collator.getInstance(Locale.FRENCH);
         Collections.sort(allApps, new Comparator<AppInfo>() {
             @Override
@@ -76,13 +72,14 @@ public class MainActivity extends AppCompatActivity {
             }
         });
 
-        // Affichage initial
         filteredApps.clear();
         filteredApps.addAll(allApps);
         adapter.setItems(filteredApps);
     }
 
     private void setupSearch() {
+        if (searchView == null) return;
+
         searchView.setOnQueryTextListener(new SearchView.OnQueryTextListener() {
             @Override
             public boolean onQueryTextSubmit(String query) {
@@ -113,5 +110,15 @@ public class MainActivity extends AppCompatActivity {
         }
 
         adapter.setItems(filteredApps);
+    }
+
+    @Override
+    public void onAppClick(AppInfo app) {
+        PackageManager pm = getPackageManager();
+        Intent launchIntent = pm.getLaunchIntentForPackage(app.getPackageName());
+
+        if (launchIntent != null) {
+            startActivity(launchIntent);
+        }
     }
 }

@@ -18,6 +18,11 @@ import java.util.List;
 public class AppsAdapter extends RecyclerView.Adapter<AppsAdapter.AppViewHolder> {
 
     private final List<AppInfo> items = new ArrayList<>();
+    private final OnAppClickListener listener;
+
+    public AppsAdapter(OnAppClickListener listener) {
+        this.listener = listener;
+    }
 
     public void setItems(List<AppInfo> newItems) {
         items.clear();
@@ -35,11 +40,18 @@ public class AppsAdapter extends RecyclerView.Adapter<AppsAdapter.AppViewHolder>
     @Override
     public void onBindViewHolder(@NonNull AppViewHolder holder, int position) {
         AppInfo app = items.get(position);
+
         holder.txtLabel.setText(app.getLabel());
         holder.imgIcon.setImageDrawable(app.getIcon());
 
-        // Plus tard (étape tri intelligent) :
+        // Étape 4/5 : on affichera la catégorie ici
         holder.txtCategory.setText("");
+
+        holder.itemView.setOnClickListener(v -> {
+            if (listener != null) {
+                listener.onAppClick(app);
+            }
+        });
     }
 
     @Override
