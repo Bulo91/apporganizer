@@ -1,15 +1,34 @@
-// ui/MainActivity.java
 package com.example.apporganizer;
 
-
+import android.content.Intent;
+import android.content.pm.PackageManager;
+import android.content.pm.ResolveInfo;
 import android.os.Bundle;
+
 import androidx.appcompat.app.AppCompatActivity;
+import android.widget.SearchView;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
+
+import com.example.apporganizer.model.AppInfo;
+import com.example.apporganizer.ui.AppsAdapter;
+
+import java.text.Collator;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Comparator;
+import java.util.List;
+import java.util.Locale;
 
 public class MainActivity extends AppCompatActivity {
 
     private RecyclerView rvApps;
+    private SearchView searchView;
+
+    private AppsAdapter adapter;
+
+    private final List<AppInfo> allApps = new ArrayList<>();
+    private final List<AppInfo> filteredApps = new ArrayList<>();
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -17,8 +36,82 @@ public class MainActivity extends AppCompatActivity {
         setContentView(R.layout.activity_main);
 
         rvApps = findViewById(R.id.rvApps);
-        rvApps.setLayoutManager(new LinearLayoutManager(this));
 
-        // Étape 2 : on branchera l'adapter avec la liste d'apps
+        // Si tu n’as pas encore de SearchView dans activity_main, commente cette ligne et setupSearch()
+        searchView = findViewById(R.id.searchView);
+
+        rvApps.setLayoutManager(new LinearLayoutManager(this));
+        adapter = new AppsAdapter();
+        rvApps.setAdapter(adapter);
+
+        loadInstalledApps();
+
+        if (searchView != null) {
+            setupSearch();
+        }
+    }
+
+    private void loadInstalledApps() {
+        allApps.clear();
+
+        PackageManager pm = getPackageManager();
+
+        Intent intent = new Intent(Intent.ACTION_MAIN, null);
+        intent.addCategory(Intent.CATEGORY_LAUNCHER);
+
+        List<ResolveInfo> resolveInfos = pm.queryIntentActivities(intent, 0);
+
+        for (ResolveInfo ri : resolveInfos) {
+            String packageName = ri.activityInfo.packageName;
+            String label = ri.loadLabel(pm).toString();
+            allApps.add(new AppInfo(packageName, label, ri.loadIcon(pm)));
+        }
+
+        // Tri alphabétique (gère accents FR)
+        final Collator collator = Collator.getInstance(Locale.FRENCH);
+        Collections.sort(allApps, new Comparator<AppInfo>() {
+            @Override
+            public int compare(AppInfo a1, AppInfo a2) {
+                return collator.compare(a1.getLabel(), a2.getLabel());
+            }
+        });
+
+        // Affichage initial
+        filteredApps.clear();
+        filteredApps.addAll(allApps);
+        adapter.setItems(filteredApps);
+    }
+
+    private void setupSearch() {
+        searchView.setOnQueryTextListener(new SearchView.OnQueryTextListener() {
+            @Override
+            public boolean onQueryTextSubmit(String query) {
+                return false;
+            }
+
+            @Override
+            public boolean onQueryTextChange(String newText) {
+                filterApps(newText);
+                return true;
+            }
+        });
+    }
+
+    private void filterApps(String query) {
+        String q = (query == null) ? "" : query.trim().toLowerCase(Locale.FRENCH);
+
+        filteredApps.clear();
+
+        if (q.isEmpty()) {
+            filteredApps.addAll(allApps);
+        } else {
+            for (AppInfo app : allApps) {
+                if (app.getLabel().toLowerCase(Locale.FRENCH).contains(q)) {
+                    filteredApps.add(app);
+                }
+            }
+        }
+
+        adapter.setItems(filteredApps);
     }
 }
